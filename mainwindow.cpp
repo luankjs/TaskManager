@@ -7,8 +7,6 @@ int cpuCores;
 
 vector<int> last_total_jiffies;
 vector<int> last_work_jiffies;
-vector<int> total_jiffies;
-vector<int> work_jiffies;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -17,6 +15,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->setupUi(this);
 
     cpuCores = getCpuCores();
+
+    for(int i = 0; i <= cpuCores; i++) {
+        last_total_jiffies.push_back(0);
+        last_work_jiffies.push_back(0);
+    }
 
     initializeCpuGraph();
 }
@@ -37,11 +40,6 @@ void MainWindow::initializeCpuGraph() {
 
         ui->widgetCpu->addGraph();
         ui->widgetCpu->graph(i)->setPen(QPen(QColor(r, g, b)));
-
-        last_total_jiffies.push_back(0);
-        last_work_jiffies.push_back(0);
-        total_jiffies.push_back(0);
-        work_jiffies.push_back(0);
     }
 
     QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
@@ -54,7 +52,7 @@ void MainWindow::initializeCpuGraph() {
     connect(ui->widgetCpu->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetCpu->yAxis2, SLOT(setRange(QCPRange)));
 
     connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlot()));
-    dataTimer.start(5);
+    dataTimer.start(2);
 }
 
 int MainWindow::randomColorNumber() {
@@ -90,58 +88,58 @@ void MainWindow::realtimeDataSlot()
 {
     static QTime time(QTime::currentTime());
     double key = time.elapsed()/1000.0;
-    static double lastPointKey = 0;
 
-    if (key-lastPointKey > 0.5) {
-      for(int i = 0; i <= cpuCores; i++) {
-        cout << getCpuUsage(i) << endl;
-        ui->widgetCpu->graph(i)->addData(key, getCpuUsage(i));
-      }
-
-      lastPointKey = key;
-    }
+    getCpuUsage(key);
 
     // make key axis range scroll with the data (at a constant range size of 8):
     ui->widgetCpu->xAxis->setRange(key, 8, Qt::AlignRight);
     ui->widgetCpu->replot();
 }
 
-float MainWindow::getCpuUsage(int cpu_id) {
+void MainWindow::getCpuUsage(double key) {
     FILE* pipe = popen("cat /proc/stat", "r");
-    if (!pipe) return 0;
 
     char buffer[128];
-    string cpu_str = "cpu" + std::to_string(cpu_id);
+    int cpuIterator;
+    vector<int> total_jiffies (4, 0);
+    vector<int> work_jiffies (4, 0);
 
+    cpuIterator = -1;
     while (!feof(pipe)) {
         if(fgets(buffer, 128, pipe) != NULL) {
-            vector<string> v{split(buffer, ' ')};
+            if (cpuIterator >= 0 && cpuIterator <= cpuCores) {
+                vector<string> v{split(buffer, ' ')};
 
-            if (v[0].find(cpu_str) != std::string::npos) {
                 for(int i = 1; i < v.size(); i++) {
-                    if (i <= 3) {
-                        work_jiffies[cpu_id] += std::stoi(v[i]);
+                    if (i == 4) {
+                        work_jiffies[cpuIterator] = std::stoi(v[i]);
                     }
-                    total_jiffies[cpu_id] += std::stoi(v[i]);
+                    total_jiffies[cpuIterator] += std::stoi(v[i]);
                 }
             }
+            cpuIterator++;
         }
     }
 
     pclose(pipe);
 
-    long int work_over_period = work_jiffies[cpu_id] - last_work_jiffies[cpu_id];
+    for (int i = 0; i <= cpuCores; i++) {
+        cout << last_work_jiffies[i] << endl;
+        cout << "***************last_work_jiffies" << endl;
+        float work_over_period = work_jiffies[i] - last_work_jiffies[i];
 
-    long int total_over_period = total_jiffies[cpu_id] - last_total_jiffies[cpu_id];
+        cout << last_total_jiffies[i] << endl;
+        cout << "***************last_work_jiffies" << endl;
+        float total_over_period = total_jiffies[i] - last_total_jiffies[i];
 
-    float cpu = (float) work_over_period / (float) total_over_period * 100;
+        float cpu = (work_over_period / total_over_period) * 100;
 
-    for (int i = 0; i < 4; i++) {
-        last_work_jiffies[i] = work_jiffies[i];
-        last_total_jiffies[i] = total_jiffies[i];
+        cout << cpu << endl;
+        ui->widgetCpu->graph(i)->addData(key, cpu);
+
+        last_total_jiffies.at(i) = total_jiffies.at(i);
+        last_work_jiffies.at(i) = work_jiffies.at(i);
     }
-
-    return cpu;
 }
 
 /**

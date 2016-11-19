@@ -7,8 +7,10 @@
 #include <string>
 #include <ctime>
 #include <vector>
-#include<iostream>
-#include<fstream>
+#include <iostream>
+#include <fstream>
+#include <thread>
+#include <chrono>
 
 using namespace std;
 
@@ -27,7 +29,9 @@ public:
     int randomColorNumber();
     int getCpuCores();
     vector<string> split(string str, char delimiter);
-    float getCpuUsage(int cpu_id);
+    void getCpuUsage(double key);
+    bool get_cpu_times(size_t &idle_time, size_t &total_time);
+    std::vector<size_t> get_cpu_times();
 
 public slots:
     void realtimeDataSlot();
