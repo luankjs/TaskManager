@@ -11,6 +11,7 @@
 #include <fstream>
 #include <thread>
 #include <chrono>
+#include <thread>
 
 using namespace std;
 
@@ -30,11 +31,13 @@ public:
     int getCpuCores();
     vector<string> split(string str, char delimiter);
     void getCpuUsage(double key);
-    bool get_cpu_times(size_t &idle_time, size_t &total_time);
-    std::vector<size_t> get_cpu_times();
+    void cpuGraph();
+    void memoryGraph();
+    void initializeMemoryGraph();
 
 public slots:
     void realtimeDataSlot();
+    void realtimeDataSlotMemory();
 
 private:
     Ui::MainWindow *ui;

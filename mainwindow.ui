@@ -45,10 +45,38 @@
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
         <item>
-         <widget class="QCustomPlot" name="widgetCpu" native="true"/>
+         <widget class="QCustomPlot" name="widgetCpu" native="true">
+          <widget class="QLabel" name="label_3">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>121</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Uso de Processador</string>
+           </property>
+          </widget>
+         </widget>
         </item>
         <item>
-         <widget class="QWidget" name="widgetMemory" native="true"/>
+         <widget class="QCustomPlot" name="widgetMemory" native="true">
+          <widget class="QLabel" name="label_2">
+           <property name="geometry">
+            <rect>
+             <x>0</x>
+             <y>0</y>
+             <width>121</width>
+             <height>16</height>
+            </rect>
+           </property>
+           <property name="text">
+            <string>Uso de Memória</string>
+           </property>
+          </widget>
+         </widget>
         </item>
        </layout>
       </widget>

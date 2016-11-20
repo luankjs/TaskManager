@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent) :
     }
 
     initializeCpuGraph();
+
+    initializeMemoryGraph();
 }
 
 MainWindow::~MainWindow()
@@ -53,6 +55,62 @@ void MainWindow::initializeCpuGraph() {
 
     connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlot()));
     dataTimer.start(2);
+}
+
+void MainWindow::initializeMemoryGraph() {
+    srand (time(NULL));
+
+    int r = rand() % 255 + 1;
+    int g = rand() % 255 + 1;
+    int b = rand() % 255 + 1;
+
+    ui->widgetMemory->addGraph();
+    ui->widgetMemory->graph(0)->setPen(QPen(QColor(r, g, b)));
+
+    QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+    timeTicker->setTimeFormat("%h:%m:%s");
+    ui->widgetMemory->xAxis->setTicker(timeTicker);
+    ui->widgetMemory->axisRect()->setupFullAxesBox();
+    ui->widgetMemory->yAxis->setRange(0, 100);
+
+    connect(ui->widgetMemory->xAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetMemory->xAxis2, SLOT(setRange(QCPRange)));
+    connect(ui->widgetMemory->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetMemory->yAxis2, SLOT(setRange(QCPRange)));
+
+    connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlotMemory()));
+    dataTimer.start(1);
+}
+
+void MainWindow::realtimeDataSlotMemory() {
+    static QTime time(QTime::currentTime());
+    double key = time.elapsed()/1000.0;
+
+    std::ifstream proc_stat("/proc/meminfo");
+    std::string str;
+    int lineCount = 0;
+    long int total_mem, free_mem;
+    while (std::getline(proc_stat, str))
+    {
+       vector<string> memInfoLine{split(str, ' ')};
+
+       if (lineCount == 0) {
+           total_mem = std::stoi(memInfoLine[8]);
+       } else if (lineCount == 1) {
+           free_mem = std::stoi(memInfoLine[9]);
+       } else {
+           break;
+       }
+       lineCount++;
+    }
+
+    long int used_mem = total_mem - free_mem;
+
+    float mem_usage = (100 * used_mem) / total_mem;
+
+    ui->widgetMemory->graph(0)->addData(key, mem_usage);
+
+    // make key axis range scroll with the data (at a constant range size of 8):
+    ui->widgetMemory->xAxis->setRange(key, 8, Qt::AlignRight);
+    ui->widgetMemory->replot();
 }
 
 int MainWindow::randomColorNumber() {
@@ -124,17 +182,12 @@ void MainWindow::getCpuUsage(double key) {
     pclose(pipe);
 
     for (int i = 0; i <= cpuCores; i++) {
-        cout << last_work_jiffies[i] << endl;
-        cout << "***************last_work_jiffies" << endl;
         float work_over_period = work_jiffies[i] - last_work_jiffies[i];
 
-        cout << last_total_jiffies[i] << endl;
-        cout << "***************last_work_jiffies" << endl;
         float total_over_period = total_jiffies[i] - last_total_jiffies[i];
 
         float cpu = (work_over_period / total_over_period) * 100;
 
-        cout << cpu << endl;
         ui->widgetCpu->graph(i)->addData(key, cpu);
 
         last_total_jiffies.at(i) = total_jiffies.at(i);
