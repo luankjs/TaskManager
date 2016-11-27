@@ -34,10 +34,12 @@ public:
     void cpuGraph();
     void memoryGraph();
     void initializeMemoryGraph();
+    void initializeChargeGraph();
 
 public slots:
     void realtimeDataSlot();
     void realtimeDataSlotMemory();
+    void realtimeDataSlotCharge();
 
 private:
     Ui::MainWindow *ui;

@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent) :
     initializeCpuGraph();
 
     initializeMemoryGraph();
+
+    initializeChargeGraph();
 }
 
 MainWindow::~MainWindow()
@@ -80,6 +82,29 @@ void MainWindow::initializeMemoryGraph() {
     dataTimer.start(1);
 }
 
+void MainWindow::initializeChargeGraph() {
+    srand (time(NULL));
+
+    int r = rand() % 255 + 1;
+    int g = rand() % 255 + 1;
+    int b = rand() % 255 + 1;
+
+    ui->widgetCharge->addGraph();
+    ui->widgetCharge->graph(0)->setPen(QPen(QColor(r, g, b)));
+
+    QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+    timeTicker->setTimeFormat("%h:%m:%s");
+    ui->widgetCharge->xAxis->setTicker(timeTicker);
+    ui->widgetCharge->axisRect()->setupFullAxesBox();
+    ui->widgetCharge->yAxis->setRange(0, 100);
+
+    connect(ui->widgetCharge->xAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetMemory->xAxis2, SLOT(setRange(QCPRange)));
+    connect(ui->widgetCharge->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetMemory->yAxis2, SLOT(setRange(QCPRange)));
+
+    connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlotCharge()));
+    dataTimer.start(1);
+}
+
 void MainWindow::realtimeDataSlotMemory() {
     static QTime time(QTime::currentTime());
     double key = time.elapsed()/1000.0;
@@ -111,6 +136,32 @@ void MainWindow::realtimeDataSlotMemory() {
     // make key axis range scroll with the data (at a constant range size of 8):
     ui->widgetMemory->xAxis->setRange(key, 8, Qt::AlignRight);
     ui->widgetMemory->replot();
+}
+
+void MainWindow::realtimeDataSlotCharge() {
+    static QTime time(QTime::currentTime());
+    double key = time.elapsed()/1000.0;
+
+    std::ifstream battery_stat("/sys/class/power_supply/BAT1/uevent");
+    std::string str;
+    int lineCount = 0;
+    long int percentCharge;
+    while (std::getline(battery_stat, str))
+    {
+       if (lineCount == 11) {
+           vector<string> batteryInfoLine{split(str, '=')};
+
+           percentCharge = std::stoi(batteryInfoLine[1]);
+
+           break;
+       }
+       lineCount++;
+    }
+
+    ui->widgetCharge->graph(0)->addData(key, percentCharge);
+
+    ui->widgetCharge->xAxis->setRange(key, 8, Qt::AlignRight);
+    ui->widgetCharge->replot();
 }
 
 int MainWindow::randomColorNumber() {

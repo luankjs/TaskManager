@@ -32,7 +32,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>1</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tabProcess">
        <attribute name="title">
@@ -84,6 +84,14 @@
        <attribute name="title">
         <string>Energia</string>
        </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout_3">
+        <item>
+         <widget class="QCustomPlot" name="widgetCharge" native="true"/>
+        </item>
+        <item>
+         <widget class="QCustomPlot" name="widgetDischarge" native="true"/>
+        </item>
+       </layout>
       </widget>
      </widget>
     </item>
