@@ -26,6 +26,8 @@ MainWindow::MainWindow(QWidget *parent) :
     initializeMemoryGraph();
 
     initializeChargeGraph();
+
+    initializeDischargeGraph();
 }
 
 MainWindow::~MainWindow()
@@ -105,6 +107,29 @@ void MainWindow::initializeChargeGraph() {
     dataTimer.start(1);
 }
 
+void MainWindow::initializeDischargeGraph() {
+    srand (time(NULL));
+
+    int r = rand() % 255 + 1;
+    int g = rand() % 255 + 1;
+    int b = rand() % 255 + 1;
+
+    ui->widgetDischarge->addGraph();
+    ui->widgetDischarge->graph(0)->setPen(QPen(QColor(r, g, b)));
+
+    QSharedPointer<QCPAxisTickerTime> timeTicker(new QCPAxisTickerTime);
+    timeTicker->setTimeFormat("%h:%m:%s");
+    ui->widgetDischarge->xAxis->setTicker(timeTicker);
+    ui->widgetDischarge->axisRect()->setupFullAxesBox();
+    ui->widgetDischarge->yAxis->setRange(0, 20);
+
+    connect(ui->widgetDischarge->xAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetDischarge->xAxis2, SLOT(setRange(QCPRange)));
+    connect(ui->widgetDischarge->yAxis, SIGNAL(rangeChanged(QCPRange)), ui->widgetDischarge->yAxis2, SLOT(setRange(QCPRange)));
+
+    connect(&dataTimer, SIGNAL(timeout()), this, SLOT(realtimeDataSlotDischarge()));
+    dataTimer.start(1);
+}
+
 void MainWindow::realtimeDataSlotMemory() {
     static QTime time(QTime::currentTime());
     double key = time.elapsed()/1000.0;
@@ -162,6 +187,38 @@ void MainWindow::realtimeDataSlotCharge() {
 
     ui->widgetCharge->xAxis->setRange(key, 8, Qt::AlignRight);
     ui->widgetCharge->replot();
+}
+
+void MainWindow::realtimeDataSlotDischarge() {
+    static QTime time(QTime::currentTime());
+    double key = time.elapsed()/1000.0;
+
+    std::ifstream battery_stat("/sys/class/power_supply/BAT1/uevent");
+    std::string str;
+    int lineCount = 0;
+    long int powerSupplyChargeFull;
+    long int powerSupplyChargeNow;
+    long int powerSupplyCurrentNow;
+    while (std::getline(battery_stat, str))
+    {
+       vector<string> batteryInfoLine{split(str, '=')};
+
+       if (lineCount == 7) {
+           powerSupplyCurrentNow = std::stoi(batteryInfoLine[1]);
+       } else if (lineCount == 9) {
+           powerSupplyChargeFull = std::stoi(batteryInfoLine[1]);
+       } else if (lineCount == 10) {
+           powerSupplyChargeNow = std::stoi(batteryInfoLine[1]);
+       }
+       lineCount++;
+    }
+
+    float dischargeTime = (powerSupplyChargeFull - powerSupplyChargeNow) / powerSupplyCurrentNow;
+
+    ui->widgetDischarge->graph(0)->addData(key, dischargeTime);
+
+    ui->widgetDischarge->xAxis->setRange(key, 8, Qt::AlignRight);
+    ui->widgetDischarge->replot();
 }
 
 int MainWindow::randomColorNumber() {
